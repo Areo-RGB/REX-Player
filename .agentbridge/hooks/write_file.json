@@ -1,9 +1,0 @@
-{
-  "success": [
-    {
-      "script": "scripts/check-stale-naming.js",
-      "timeout": 10,
-      "failSilently": true
-    }
-  ]
-}
