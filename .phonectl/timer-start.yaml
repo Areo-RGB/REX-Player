@@ -1,0 +1,9 @@
+# Starts a timer by (part of) its name in the split-screen view.
+#   phonectl flow -e TIMER="FIFA 11+ Level 1" .phonectl/timer-start.yaml
+appId: xyz.mpv.rex.debug
+---
+- runFlow: timers-open.yaml
+- tapOn:
+    contains: ${TIMER}   # contains, not text: names like "FIFA 11+" break regexes
+- assertVisible: Pause
+- takeScreenshot: timer-start

@@ -35,6 +35,7 @@ import org.koin.core.annotation.KoinExperimentalAPI
 class App : Application() {
   private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
   private val metadataCache: VideoMetadataCacheRepository by inject()
+  private val m3uAutoSync: xyz.mpv.rex.utils.media.M3UAutoSync by inject()
   private val hybridMediaIndex: HybridMediaIndexRepository by inject()
   private val advancedPreferences: xyz.mpv.rex.preferences.AdvancedPreferences by inject()
   private val mediaStoreInvalidations = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -90,6 +91,11 @@ class App : Application() {
       runCatching {
         metadataCache.performMaintenance()
       }
+    }
+
+    // Playlists written outside the app (timer-clips Lua script) are imported/refreshed here
+    applicationScope.launch {
+      runCatching { m3uAutoSync.sync() }
     }
   }
 

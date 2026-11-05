@@ -664,6 +664,14 @@ val DatabaseModule =
     single {
       PlaylistRepository(
         playlistDao = get<MpvExDatabase>().playlistDao(),
+        appContext = androidContext(),
+      )
+    }
+
+    single {
+      xyz.mpv.rex.utils.media.M3UAutoSync(
+        context = androidContext(),
+        repository = get(),
       )
     }
 

@@ -35,9 +35,6 @@ class AppearancePreferences(
   val enableGlassSeekbarBackground = preferenceStore.getBoolean("enable_glass_seekbar_background", false)
   val enableBounceAnimation = preferenceStore.getBoolean("enable_bounce_animation", false)
   val showCommunityIcon = preferenceStore.getBoolean("show_community_icon", true)
-  val communityPromptDismissedPermanently = preferenceStore.getBoolean("community_prompt_dismissed_permanently", false)
-  val communityFirstAppOpenTimestamp = preferenceStore.getLong("community_first_app_open_timestamp", 0L)
-  val communityAlreadyJoinedTimestamp = preferenceStore.getLong("community_already_joined_timestamp", 0L)
 
   val showHiddenFiles = preferenceStore.getBoolean("show_hidden_files", false)
   val customProfileName = preferenceStore.getString("custom_profile_name", "")

@@ -1,0 +1,11 @@
+# Starts a timer and switches to the mpv player view (portrait, timer overlay); back + stop after.
+#   phonectl flow -e TIMER="FIFA 11+ Level 1" .phonectl/timer-player.yaml
+appId: xyz.mpv.rex.debug
+---
+- runFlow: timer-start.yaml
+- tapOn: Player view
+- wait: 5
+- takeScreenshot: timer-player-work
+- back
+- assertVisible: Pause
+- tapOn: Stop

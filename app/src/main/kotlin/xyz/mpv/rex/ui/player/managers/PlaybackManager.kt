@@ -324,6 +324,8 @@ class PlaybackManager(
         videoRotation: Int,
     ) {
         if (!canAccessMpv()) return
+        // Timer player view always crops to fill, whatever aspect is saved
+        val aspect = if (xyz.mpv.rex.ui.browser.timers.TimerRunner.playerMode) VideoAspect.Crop else aspect
         runCatching {
             when (aspect) {
                 VideoAspect.Fit -> {

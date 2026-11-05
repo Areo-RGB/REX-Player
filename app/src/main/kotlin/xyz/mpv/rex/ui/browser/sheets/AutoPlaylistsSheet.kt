@@ -38,6 +38,7 @@ fun AutoPlaylistsSheet(
   val browserPreferences = koinInject<BrowserPreferences>()
   val showRecentlyAdded by browserPreferences.showRecentlyAddedPlaylist.collectAsState()
   val showMostPlayed by browserPreferences.showMostPlayedPlaylist.collectAsState()
+  val showTimerClips by browserPreferences.showTimerClipPlaylists.collectAsState()
 
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -101,7 +102,7 @@ fun AutoPlaylistsSheet(
         }
 
         GroupedPreferenceCard(
-          position = GroupPosition.LAST,
+          position = GroupPosition.MIDDLE,
         ) {
           SwitchPreference(
             value = showMostPlayed,
@@ -110,6 +111,22 @@ fun AutoPlaylistsSheet(
             summary = {
               Text(
                 text = stringResource(R.string.playlist_most_played_desc),
+                color = MaterialTheme.colorScheme.outline,
+              )
+            },
+          )
+        }
+
+        GroupedPreferenceCard(
+          position = GroupPosition.LAST,
+        ) {
+          SwitchPreference(
+            value = showTimerClips,
+            onValueChange = { browserPreferences.showTimerClipPlaylists.set(it) },
+            title = { Text(text = stringResource(R.string.playlist_timer_clips)) },
+            summary = {
+              Text(
+                text = stringResource(R.string.playlist_timer_clips_desc),
                 color = MaterialTheme.colorScheme.outline,
               )
             },

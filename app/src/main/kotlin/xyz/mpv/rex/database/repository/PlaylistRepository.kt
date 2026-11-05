@@ -9,8 +9,12 @@ import xyz.mpv.rex.utils.media.M3UParser
 import xyz.mpv.rex.utils.media.M3UParseResult
 import xyz.mpv.rex.utils.media.M3UPlaylistItem
 import kotlinx.coroutines.flow.Flow
+import java.io.File
 
-class PlaylistRepository(private val playlistDao: PlaylistDao) {
+class PlaylistRepository(
+  private val playlistDao: PlaylistDao,
+  private val appContext: Context? = null,
+) {
   // Playlist operations
   suspend fun createPlaylist(name: String): Long {
     val now = System.currentTimeMillis()
@@ -247,7 +251,55 @@ class PlaylistRepository(private val playlistDao: PlaylistDao) {
     }
   }
 
-  suspend fun createM3UPlaylistFromFile(context: Context, uri: Uri): Result<Long> {
+  /** What an M3U sync did with one file. */
+  enum class M3UAction { IMPORTED, REFRESHED, UP_TO_DATE }
+
+  /**
+   * Imports a local M3U/M3U8, or refreshes the playlist already bound to it when the file is newer
+   * than the last import. This is how playlists written outside REX (the timer-clips Lua script)
+   * appear without a manual import.
+   */
+  suspend fun importOrRefreshM3U(context: Context, uri: Uri): M3UAction {
+    val source = uri.toString()
+    val existing = playlistDao.getPlaylistBySourceUrl(source)
+    if (existing == null) {
+      createM3UPlaylistFromFile(context, uri, source).getOrThrow()
+      return M3UAction.IMPORTED
+    }
+    val modified = fileModified(context, uri)
+    if (modified > 0 && existing.updatedAt >= modified) return M3UAction.UP_TO_DATE
+    refreshM3UPlaylist(existing.id).getOrThrow()
+    return M3UAction.REFRESHED
+  }
+
+  /** Playlist title from the file name ("timer-clips--FIFA 11+.m3u8" -> "FIFA 11+"). */
+  private fun displayName(uri: Uri): String =
+    (uri.lastPathSegment ?: "playlist")
+      .substringAfterLast('/')
+      .substringBeforeLast('.')
+      .removePrefix("timer-clips--")
+      .replace('_', ' ')
+      .replace('-', ' ')
+      .trim()
+      .ifEmpty { "M3U Playlist" }
+
+  private fun fileModified(context: Context, uri: Uri): Long = runCatching {
+    if (uri.scheme == "file") {
+      val path = uri.path ?: return@runCatching 0L
+      File(path).lastModified()
+    } else {
+      context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+        val index = cursor.getColumnIndex(android.provider.DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+        if (index >= 0 && cursor.moveToFirst()) cursor.getLong(index) else 0L
+      } ?: 0L
+    }
+  }.getOrDefault(0L)
+
+  suspend fun createM3UPlaylistFromFile(
+    context: Context,
+    uri: Uri,
+    sourceUrl: String? = null,
+  ): Result<Long> {
     return try {
       val parseResult = M3UParser.parseFromUri(context, uri)
       
@@ -256,10 +308,10 @@ class PlaylistRepository(private val playlistDao: PlaylistDao) {
           val now = System.currentTimeMillis()
           val playlistId = playlistDao.insertPlaylist(
             PlaylistEntity(
-              name = parseResult.playlistName,
+              name = displayName(uri),
               createdAt = now,
               updatedAt = now,
-              m3uSourceUrl = null, // Local file, no URL to refresh from
+              m3uSourceUrl = sourceUrl ?: uri.toString(), // kept so the file can be re-read later
               isM3uPlaylist = true
             )
           )
@@ -296,8 +348,14 @@ class PlaylistRepository(private val playlistDao: PlaylistDao) {
       if (!playlist.isM3uPlaylist || playlist.m3uSourceUrl == null) {
         return Result.failure(Exception("Not an M3U playlist or no source URL available"))
       }
-      
-      val parseResult = M3UParser.parseFromUrl(playlist.m3uSourceUrl)
+
+      val source = playlist.m3uSourceUrl
+      val parseResult = if (source.startsWith("http://") || source.startsWith("https://")) {
+        M3UParser.parseFromUrl(source)
+      } else {
+        val context = appContext ?: return Result.failure(Exception("No context for a local playlist"))
+        M3UParser.parseFromUri(context, Uri.parse(source))
+      }
       
       when (parseResult) {
         is M3UParseResult.Success -> {
@@ -317,7 +375,7 @@ class PlaylistRepository(private val playlistDao: PlaylistDao) {
           }
           
           playlistDao.insertPlaylistItems(items)
-          updatePlaylist(playlist)
+          updatePlaylist(playlist.copy(updatedAt = now))
           
           Result.success(Unit)
         }

@@ -1,0 +1,19 @@
+# New timer editor: pick a clip folder, add a step, pick a clip, then discard (nothing saved).
+#   phonectl flow -e FOLDER="20 Fast" -e CLIP="03 - Side to Side.mp4" .phonectl/timer-new.yaml
+appId: xyz.mpv.rex.debug
+---
+- runFlow: timers-open.yaml
+- tapOn: New timer
+- assertVisible: Clip folder
+- tapOn: Pick folder
+- tapOn:
+    contains: ${FOLDER}
+- tapOn: Use this folder
+- tapOn: Add step
+- tapOn: None              # the step's Clip dropdown
+- tapOn:
+    contains: ${CLIP}
+- takeScreenshot: timer-new
+- back
+- tapOn: Discard
+- assertVisible: Timer settings

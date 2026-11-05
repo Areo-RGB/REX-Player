@@ -1,4 +1,5 @@
 [versions]
+spotless = "8.11.0"
 agp = "9.3.1"
 commonsNet = "3.12.0"
 smbj = "0.14.0"
@@ -84,6 +85,7 @@ koin = ["koin-core", "koin-android", "koin-compose", "koin-viewmodel"]
 compose-navigation3 = ["androidx-navigation3-runtime", "androidx-navigation3-ui"]
 
 [plugins]
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 ksp = { id = "com.google.devtools.ksp", version = "2.3.9" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

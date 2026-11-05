@@ -13,6 +13,7 @@ import xyz.mpv.rex.database.repository.PlaylistRepository
 import xyz.mpv.rex.domain.media.model.Video
 import xyz.mpv.rex.repository.MediaFileRepository
 import xyz.mpv.rex.ui.browser.base.BaseBrowserViewModel
+import xyz.mpv.rex.utils.media.TimerClips
 import xyz.mpv.rex.utils.storage.VideoScanUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -78,6 +79,8 @@ class PlaylistDetailViewModel(
           loadData()
         }
       }
+    } else if (playlistId <= PlaylistViewModel.ID_TIMER_BASE) {
+      loadData()
     } else {
       // Observe playlist info
       viewModelScope.launch(Dispatchers.IO) {
@@ -143,8 +146,31 @@ class PlaylistDetailViewModel(
           return@launch
         }
 
-        val itemsList = playlistRepository.getPlaylistItems(playlistId)
-        
+        val timerFolder = if (playlistId <= PlaylistViewModel.ID_TIMER_BASE) {
+          TimerClips.scanFolders().getOrNull(PlaylistViewModel.ID_TIMER_BASE - playlistId)
+        } else {
+          null
+        }
+        if (timerFolder != null) {
+          _playlist.value = PlaylistEntity(
+            id = playlistId,
+            name = timerFolder.name,
+            createdAt = 0L,
+            updatedAt = 0L,
+            isM3uPlaylist = true,
+          )
+        }
+        val itemsList = timerFolder?.clips?.mapIndexed { index, clip ->
+          PlaylistItemEntity(
+            id = index + 1,
+            playlistId = playlistId,
+            filePath = clip.path,
+            fileName = clip.title,
+            position = index,
+            addedAt = 0L,
+          )
+        } ?: playlistRepository.getPlaylistItems(playlistId)
+
         if (itemsList.isEmpty()) {
           _items.value = emptyList()
         } else {

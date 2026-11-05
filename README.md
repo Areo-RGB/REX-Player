@@ -80,6 +80,19 @@ If you would like to contribute to translating REX Player into your language, pl
 
 ---
 
+## Playlists generated outside the app
+
+M3U/M3U8 files dropped on the device are picked up automatically: on app start and whenever the
+Playlists screen loads, `M3UAutoSync` scans `/storage/emulated/0/Download/timer-clips` and
+`/storage/emulated/0/Documents/Lua-scripts` (two levels deep), imports new `*.m3u8` files as
+playlists and **refreshes** the ones whose file changed (mtime is compared with the playlist's
+`updatedAt`). Entries may be absolute device paths, `file://` URIs or http(s) URLs. The playlist
+title comes from the file name (`timer-clips--FIFA 11+.m3u8` → "FIFA 11+").
+
+mpv's Lua API cannot create playlists itself — they are Room rows — so a Lua script can only write
+the M3U8 file; this scan is the bridge. See `~/Desktop/timer-clips-folder-playlists.lua` for the
+one-playlist-per-clip-folder script used with the timer clips.
+
 ## Credits
 
 REX Player has its roots in **[mpvEx](https://github.com/marlboro-advance/mpvEx)**, which itself builds on **[mpv-android](https://github.com/mpv-android/mpv-android)**. We're grateful for the foundation they laid.

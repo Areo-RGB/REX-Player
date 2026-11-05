@@ -169,11 +169,13 @@ class BrowserPreferences(
   val enableTabRecents = preferenceStore.getBoolean("enable_tab_recents", true)
   val enableTabPlaylists = preferenceStore.getBoolean("enable_tab_playlists", true)
   val enableTabNetwork = preferenceStore.getBoolean("enable_tab_network", true)
+  val enableTabTimers = preferenceStore.getBoolean("enable_tab_timers", true)
+  val timerPlayerView = preferenceStore.getBoolean("timer_player_view", false)
   val bottomNavOrder = preferenceStore.getString("bottom_nav_order", "home,shorts,recents,playlists,network,you")
   val playedNetworkLinks = preferenceStore.getString("played_network_links", "")
 
   fun getBottomNavOrder(): List<String> {
-    val defaultOrder = listOf("home", "shorts", "recents", "playlists", "network", "you")
+    val defaultOrder = listOf("home", "shorts", "recents", "playlists", "timers", "network", "you")
     val saved = bottomNavOrder.get().split(",").map { it.trim() }.filter { it.isNotEmpty() }
     val missing = defaultOrder.filterNot { it in saved }
     return saved + missing
@@ -186,6 +188,7 @@ class BrowserPreferences(
   // Auto-playlist preferences
   val showRecentlyAddedPlaylist = preferenceStore.getBoolean("show_recently_added_playlist", true)
   val showMostPlayedPlaylist = preferenceStore.getBoolean("show_most_played_playlist", true)
+  val showTimerClipPlaylists = preferenceStore.getBoolean("show_timer_clip_playlists", true)
 }
 
 /**

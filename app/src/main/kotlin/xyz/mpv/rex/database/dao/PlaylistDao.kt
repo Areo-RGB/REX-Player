@@ -32,6 +32,10 @@ interface PlaylistDao {
   @Query("SELECT * FROM PlaylistEntity WHERE id = :playlistId")
   suspend fun getPlaylistById(playlistId: Int): PlaylistEntity?
 
+  /** The playlist imported from this M3U/M3U8 source (file URI or URL), if any. */
+  @Query("SELECT * FROM PlaylistEntity WHERE m3uSourceUrl = :sourceUrl LIMIT 1")
+  suspend fun getPlaylistBySourceUrl(sourceUrl: String): PlaylistEntity?
+
   @Query("SELECT * FROM PlaylistEntity WHERE id = :playlistId")
   fun observePlaylistById(playlistId: Int): Flow<PlaylistEntity?>
 

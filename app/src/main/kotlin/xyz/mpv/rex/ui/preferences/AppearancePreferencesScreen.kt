@@ -247,6 +247,7 @@ object AppearancePreferencesScreen : Screen {
                         val enableTabRecents by browserPreferences.enableTabRecents.collectAsState()
                         val enableTabPlaylists by browserPreferences.enableTabPlaylists.collectAsState()
                         val enableTabNetwork by browserPreferences.enableTabNetwork.collectAsState()
+                        val enableTabTimers by browserPreferences.enableTabTimers.collectAsState()
                         val bottomNavOrder by browserPreferences.bottomNavOrder.collectAsState()
 
                         val orderedTabIds = remember(bottomNavOrder) {
@@ -259,7 +260,8 @@ object AppearancePreferencesScreen : Screen {
                             enableTabYou,
                             enableTabRecents,
                             enableTabPlaylists,
-                            enableTabNetwork
+                            enableTabNetwork,
+                            enableTabTimers
                         ) {
                             val items = mutableListOf<BottomNavTabItem>()
                             for (id in orderedTabIds) {
@@ -316,6 +318,16 @@ object AppearancePreferencesScreen : Screen {
                                             value = enableTabNetwork,
                                             enabled = true,
                                             onValueChange = { browserPreferences.enableTabNetwork.set(it) }
+                                        )
+                                    )
+                                    "timers" -> items.add(
+                                        BottomNavTabItem(
+                                            id = "timers",
+                                            titleRes = R.string.timers,
+                                            summaryRes = R.string.pref_appearance_tab_timers_summary,
+                                            value = enableTabTimers,
+                                            enabled = true,
+                                            onValueChange = { browserPreferences.enableTabTimers.set(it) }
                                         )
                                     )
                                     "you" -> items.add(

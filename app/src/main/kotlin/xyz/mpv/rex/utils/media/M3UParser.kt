@@ -164,8 +164,9 @@ object M3UParser {
             // This is a media URL
             var mediaUrl = line
             
-            // If URL is relative and we have a base URL, make it absolute
-            if (!mediaUrl.startsWith("http://") && !mediaUrl.startsWith("https://") && baseUrl != null) {
+            // Only genuinely relative entries are resolved: local playlists (the timer-clips Lua
+            // script) hold absolute paths, which URL(base, path) would mangle or throw on.
+            if (baseUrl != null && !isAbsoluteMediaPath(mediaUrl)) {
               mediaUrl = resolveRelativeUrl(baseUrl, mediaUrl)
             }
             
@@ -231,7 +232,14 @@ object M3UParser {
   /**
    * Extract base URL from a full URL
    */
-  private fun extractBaseUrl(url: String): String {
+  /** Absolute media references: remote URLs, file/content URIs and filesystem paths. */
+  private fun isAbsoluteMediaPath(value: String): Boolean =
+    value.startsWith("http://") || value.startsWith("https://") ||
+      value.startsWith("file://") || value.startsWith("content://") ||
+      value.startsWith("/") || Regex("^[A-Za-z]:[\\\\/].*").matches(value)
+
+  private fun extractBaseUrl(url: String): String? {
+    if (!url.contains('/')) return null  // a bare file name has no base to resolve against
     return try {
       val urlObj = URL(url)
       val path = urlObj.path
@@ -239,7 +247,7 @@ object M3UParser {
       val basePath = if (lastSlash >= 0) path.substring(0, lastSlash + 1) else "/"
       "${urlObj.protocol}://${urlObj.host}${if (urlObj.port != -1) ":${urlObj.port}" else ""}$basePath"
     } catch (_: Exception) {
-      url.substringBeforeLast('/') + "/"
+      if (!url.contains('/')) null else url.substringBeforeLast('/') + "/"
     }
   }
   
@@ -250,9 +258,9 @@ object M3UParser {
     return try {
       URL(URL(baseUrl), relativeUrl).toString()
     } catch (_: Exception) {
-      // Fallback to simple concatenation
+      // Fallback to simple concatenation; a base that is not a URL is left alone
+      val base = runCatching { URL(baseUrl) }.getOrNull() ?: return relativeUrl
       if (relativeUrl.startsWith("/")) {
-        val base = URL(baseUrl)
         "${base.protocol}://${base.host}${if (base.port != -1) ":${base.port}" else ""}$relativeUrl"
       } else {
         baseUrl + relativeUrl

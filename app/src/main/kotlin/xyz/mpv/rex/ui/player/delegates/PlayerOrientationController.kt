@@ -66,6 +66,11 @@ class PlayerOrientationController(
    * @param rotation Optional video rotation from metadata to correctly determine aspect ratio
    */
   fun setOrientation(width: Int = -1, height: Int = -1, rotation: Int = 0) {
+    // Timer player view is always vertical full screen
+    if (xyz.mpv.rex.ui.browser.timers.TimerRunner.playerMode) {
+      activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+      return
+    }
     val orientationPref = playerPreferences.orientation.get()
 
     activity.requestedOrientation =

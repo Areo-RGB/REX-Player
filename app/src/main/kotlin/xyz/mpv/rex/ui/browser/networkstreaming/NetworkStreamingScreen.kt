@@ -1,5 +1,7 @@
 package xyz.mpv.rex.ui.browser.networkstreaming
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -166,12 +168,15 @@ object NetworkStreamingScreen : Screen {
       },
       floatingActionButton = {
         val navigationBarHeight = xyz.mpv.rex.ui.browser.LocalNavigationBarHeight.current
+        val addConnectionLabel = stringResource(R.string.add_connection)
         if (isFabVisible) {
           ExtendedFloatingActionButton(
             onClick = { showAddSheet = true },
             icon = { Icon(Icons.Filled.Add, contentDescription = null) },
             text = { Text(stringResource(R.string.add_connection)) },
+            // material3 1.5 alpha drops the extended FAB's label from accessibility: set it explicitly
             modifier = Modifier.padding(bottom = navigationBarHeight)
+              .semantics { contentDescription = addConnectionLabel }
           )
         }
       },

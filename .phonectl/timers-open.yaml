@@ -1,0 +1,10 @@
+# Opens REX on the Timers tab.  phonectl flow .phonectl/timers-open.yaml
+appId: xyz.mpv.rex.debug
+---
+- launchApp
+- waitForAnimationToEnd
+- tapOn:
+    text: Timers
+    index: -1          # the bottom-nav label (the screen title is also "Timers")
+    optional: true     # already on the tab
+- assertVisible: Timer settings

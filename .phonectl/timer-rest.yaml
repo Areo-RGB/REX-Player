@@ -1,0 +1,10 @@
+# Starts a timer and skips to its first rest: split screen with next-up clip + lower third.
+#   phonectl flow -e TIMER="FIFA 11+ Level 1" .phonectl/timer-rest.yaml
+appId: xyz.mpv.rex.debug
+---
+- runFlow: timer-start.yaml
+- tapOn: Next
+- assertVisible: REST
+- wait: 4                # let the lower third slide/type in and the clip start
+- takeScreenshot: timer-rest
+- tapOn: Stop

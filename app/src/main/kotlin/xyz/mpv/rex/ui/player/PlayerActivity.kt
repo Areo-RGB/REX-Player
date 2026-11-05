@@ -31,6 +31,8 @@ import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
 import xyz.mpv.rex.ui.player.ambient.AmbientGlowOverlay
 import androidx.core.net.toUri
@@ -632,6 +634,8 @@ class PlayerActivity :
     setupAudio()
     setupBackPressHandler()
     setupPlayerControls()
+    followTimer()
+    if (xyz.mpv.rex.ui.browser.timers.TimerRunner.playerMode) setOrientation()
     setupPipHelper()
     setupMediaSession()
 
@@ -1199,6 +1203,36 @@ class PlayerActivity :
   }
 
   @RequiresApi(Build.VERSION_CODES.P)
+  private var lastTimerClip: String? = null
+
+  /** Timer player view: crop to fill, loop the clip, portrait. Re-applied per file. */
+  private fun applyTimerPlayerView() {
+    viewModel.changeVideoAspect(VideoAspect.Crop, showUpdate = false, persistToPreferences = false)
+    runCatching { MPVLib.setPropertyString("loop-file", "inf") }
+    setOrientation()
+  }
+
+  /** While the timer drives the player, swap clips as the steps change; close when it ends. */
+  private fun followTimer() {
+    lifecycleScope.launch {
+      xyz.mpv.rex.ui.browser.timers.TimerRunner.state.collect { s ->
+        val runner = xyz.mpv.rex.ui.browser.timers.TimerRunner
+        if (!runner.playerMode) return@collect
+        if (s == null) {
+          runner.playerMode = false
+          finish()
+          return@collect
+        }
+        val target = runner.clipFor(s) ?: return@collect
+        if (lastTimerClip == null) lastTimerClip = intent?.data?.path
+        if (target != lastTimerClip) {
+          lastTimerClip = target
+          runCatching { MPVLib.command("loadfile", target, "replace") }
+        }
+      }
+    }
+  }
+
   private fun setupPlayerControls() {
     viewModel.ambientController.startCapture(
       surfaceViewProvider = { binding.player },
@@ -1220,6 +1254,7 @@ class PlayerActivity :
             },
             modifier = Modifier,
           )
+          xyz.mpv.rex.ui.browser.timers.TimerOverlay()
         }
       }
     }
@@ -1270,6 +1305,8 @@ class PlayerActivity :
 
   @RequiresApi(Build.VERSION_CODES.P)
   override fun onDestroy() {
+    // Leaving the player hands the running timer back to the Timers tab
+    if (isFinishing) xyz.mpv.rex.ui.browser.timers.TimerRunner.playerMode = false
     Log.d(TAG, "PlayerActivity onDestroy")
     player.isExiting = true
     viewModel.playbackManager.cancelPendingJobs()
@@ -2047,6 +2084,8 @@ class PlayerActivity :
 
     // Reset manual orientation override for the new video
     orientationController.isUserOverridden = false
+
+    if (xyz.mpv.rex.ui.browser.timers.TimerRunner.playerMode) applyTimerPlayerView()
 
     // Update VM and services with exact loaded duration
     val loadedDurationSec = MPVLib.getPropertyDouble("duration") ?: 0.0

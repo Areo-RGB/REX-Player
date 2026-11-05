@@ -11,6 +11,7 @@ import xyz.mpv.rex.database.repository.MediaPlayCountRepository
 import xyz.mpv.rex.database.repository.PlaylistRepository
 import xyz.mpv.rex.repository.MediaFileRepository
 import xyz.mpv.rex.ui.browser.base.BaseBrowserViewModel
+import xyz.mpv.rex.utils.media.TimerClips
 import xyz.mpv.rex.utils.storage.VideoScanUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +36,7 @@ class PlaylistViewModel(
 ) : BaseBrowserViewModel<PlaylistWithCount>(application),
   KoinComponent {
   private val repository: PlaylistRepository by inject()
+  private val m3uAutoSync: xyz.mpv.rex.utils.media.M3UAutoSync by inject()
   private val mediaPlayCountRepository: MediaPlayCountRepository by inject()
 
   val playlistsWithCount: StateFlow<List<PlaylistWithCount>> = items
@@ -47,6 +49,9 @@ class PlaylistViewModel(
     private const val TAG = "PlaylistViewModel"
     const val ID_RECENTLY_ADDED = -1
     const val ID_MOST_PLAYED = -2
+
+    /** Timer-clip folder playlists use ids ID_TIMER_BASE, ID_TIMER_BASE - 1, … */
+    const val ID_TIMER_BASE = -1000
 
     fun factory(application: Application) =
       object : ViewModelProvider.Factory {
@@ -70,6 +75,7 @@ class PlaylistViewModel(
       merge(
         browserPreferences.showRecentlyAddedPlaylist.changes(),
         browserPreferences.showMostPlayedPlaylist.changes(),
+        browserPreferences.showTimerClipPlaylists.changes(),
       ).collectLatest {
         loadData()
       }
@@ -89,6 +95,8 @@ class PlaylistViewModel(
     viewModelScope.launch(Dispatchers.IO) {
       _isLoading.value = true
       try {
+        // Import new M3U8 files and refresh changed ones before the list is built
+        runCatching { m3uAutoSync.sync() }
         val context = getApplication<Application>()
         val autoPlaylists = mutableListOf<PlaylistWithCount>()
 
@@ -126,6 +134,26 @@ class PlaylistViewModel(
               isAutoPlaylist = true,
             )
           )
+        }
+
+        if (browserPreferences.showTimerClipPlaylists.get() &&
+          android.os.Environment.isExternalStorageManager()
+        ) {
+          TimerClips.scanFolders().forEachIndexed { index, folder ->
+            autoPlaylists.add(
+              PlaylistWithCount(
+                playlist = PlaylistEntity(
+                  id = ID_TIMER_BASE - index,
+                  name = folder.name,
+                  createdAt = 0L,
+                  updatedAt = 0L,
+                ),
+                itemCount = folder.clips.size,
+                firstItemPath = folder.clips.first().path,
+                isAutoPlaylist = true,
+              )
+            )
+          }
         }
 
         val playlists = repository.getAllPlaylists()

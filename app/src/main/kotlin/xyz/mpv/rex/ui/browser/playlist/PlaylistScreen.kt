@@ -1,5 +1,7 @@
 package xyz.mpv.rex.ui.browser.playlist
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -293,12 +295,15 @@ object PlaylistScreen : Screen {
         },
         floatingActionButton = {
           val navigationBarHeight = xyz.mpv.rex.ui.browser.LocalNavigationBarHeight.current
+          val createPlaylistLabel = stringResource(R.string.create_playlist)
           if (!selectionManager.isInSelectionMode && isFabVisible.value) {
             ExtendedFloatingActionButton(
               onClick = { showPlaylistActionSheet = true },
               icon = { Icon(Icons.Filled.Add, contentDescription = null) },
               text = { Text(stringResource(R.string.create_playlist)) },
+              // material3 1.5 alpha drops the extended FAB's label from accessibility: set it explicitly
               modifier = Modifier.padding(bottom = navigationBarHeight)
+                .semantics { contentDescription = createPlaylistLabel }
             )
           }
         }

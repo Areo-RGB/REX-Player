@@ -1,0 +1,9 @@
+# Flips "Open timers in video player" in the Timers settings dialog (run twice to restore).
+appId: xyz.mpv.rex.debug
+---
+- runFlow: timers-open.yaml
+- tapOn: Timer settings
+- tapOn:
+    rightOf: Open timers in video player   # the switch has no label of its own
+- takeScreenshot: timer-settings
+- tapOn: Done

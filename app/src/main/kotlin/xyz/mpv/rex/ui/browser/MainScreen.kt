@@ -21,16 +21,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -42,45 +39,45 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.Serializable
+import org.koin.compose.koinInject
 import xyz.mpv.rex.R
 import xyz.mpv.rex.preferences.AppearancePreferences
 import xyz.mpv.rex.preferences.BrowserPreferences
 import xyz.mpv.rex.preferences.preference.collectAsState
 import xyz.mpv.rex.presentation.Screen
-import xyz.mpv.rex.ui.browser.dialogs.CommunityLinksDialog
 import xyz.mpv.rex.ui.browser.folderlist.FolderListScreen
+import xyz.mpv.rex.ui.browser.miniplayer.MiniPlayerDefaults
+import xyz.mpv.rex.ui.browser.miniplayer.MiniPlayerStateManager
 import xyz.mpv.rex.ui.browser.networkstreaming.NetworkStreamingScreen
 import xyz.mpv.rex.ui.browser.playlist.PlaylistScreen
 import xyz.mpv.rex.ui.browser.recentlyplayed.RecentlyPlayedScreen
-import xyz.mpv.rex.ui.browser.shorts.ShortsScreen
-import xyz.mpv.rex.ui.browser.you.YouScreen
 import xyz.mpv.rex.ui.browser.selection.SelectionManager
-import xyz.mpv.rex.ui.browser.miniplayer.MiniPlayer
-import xyz.mpv.rex.ui.browser.miniplayer.MiniPlayerDefaults
-import xyz.mpv.rex.ui.browser.miniplayer.MiniPlayerStateManager
-import androidx.compose.foundation.layout.Column
-import androidx.compose.runtime.collectAsState
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.serialization.Serializable
-import org.koin.compose.koinInject
+import xyz.mpv.rex.ui.browser.shorts.ShortsScreen
+import xyz.mpv.rex.ui.browser.timers.TimersScreen
+import androidx.compose.material.icons.filled.Timer
+import xyz.mpv.rex.ui.browser.you.YouScreen
 
 @Serializable
 object MainScreen : Screen {
@@ -184,6 +181,8 @@ object MainScreen : Screen {
     val enableTabRecents by browserPreferences.enableTabRecents.collectAsState()
     val enableTabPlaylists by browserPreferences.enableTabPlaylists.collectAsState()
     val enableTabNetwork by browserPreferences.enableTabNetwork.collectAsState()
+    val enableTabTimers by browserPreferences.enableTabTimers.collectAsState()
+    val timersLabel = stringResource(R.string.timers)
     val bottomNavOrder by browserPreferences.bottomNavOrder.collectAsState()
     val customProfileImagePath by appearancePreferences.customProfileImagePath.collectAsState()
 
@@ -208,7 +207,7 @@ object MainScreen : Screen {
     val networkLabel = stringResource(R.string.network)
 
     val visibleTabs = remember(
-      isShortsEnabled, enableTabYou, enableTabRecents, enableTabPlaylists, enableTabNetwork,
+      isShortsEnabled, enableTabYou, enableTabRecents, enableTabPlaylists, enableTabNetwork, enableTabTimers,
       bottomNavOrder,
       homeLabel, shortsLabel, youLabel, recentsLabel, playlistsLabel, networkLabel
     ) {
@@ -240,6 +239,13 @@ object MainScreen : Screen {
               }
             )
           }
+        }
+        if (enableTabTimers) {
+          add(
+            VisibleTab("timers", timersLabel, Icons.Filled.Timer) {
+              TimersScreen()
+            }
+          )
         }
         if (enableTabNetwork) {
           add(
@@ -303,56 +309,6 @@ object MainScreen : Screen {
     LaunchedEffect(Unit) {
       tabRequest.collect { tab ->
         selectedTab = tab
-      }
-    }
-
-    // Community Hub auto-popup: Phase 1 (initial 1 min test threshold) / Phase 2 (15 days after "Already joined")
-    val isCommunityPromptPermanentlyDismissed by appearancePreferences.communityPromptDismissedPermanently.collectAsState()
-    val firstOpenTimestamp by appearancePreferences.communityFirstAppOpenTimestamp.collectAsState()
-    val alreadyJoinedTimestamp by appearancePreferences.communityAlreadyJoinedTimestamp.collectAsState()
-    var showCommunityAutoPopup by remember { mutableStateOf(false) }
-    var isFollowupPrompt by remember { mutableStateOf(false) }
-    var hasDismissedThisSession by rememberSaveable { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-      if (firstOpenTimestamp == 0L) {
-        appearancePreferences.communityFirstAppOpenTimestamp.set(System.currentTimeMillis())
-      }
-    }
-
-    val isHomeTabActive = selectedTab in visibleTabs.indices && visibleTabs[selectedTab].id == "home"
-
-    LaunchedEffect(
-      isHomeTabActive,
-      isCommunityPromptPermanentlyDismissed,
-      hasDismissedThisSession,
-      firstOpenTimestamp,
-      alreadyJoinedTimestamp
-    ) {
-      if (isHomeTabActive && !isCommunityPromptPermanentlyDismissed && !hasDismissedThisSession) {
-        val (remainingDelay, isFollowup) = if (alreadyJoinedTimestamp > 0L) {
-          // Phase 2: User clicked "Already joined" in the past -> wait 10 days before follow-up
-          val followupCooldownMs = 10L * 24 * 60 * 60 * 1000L // 10 days
-          val elapsed = System.currentTimeMillis() - alreadyJoinedTimestamp
-          val remaining = (followupCooldownMs - elapsed).coerceAtLeast(0L)
-          remaining to true
-        } else {
-          // Phase 1: User hasn't clicked "Already joined" yet -> wait initial threshold (20 minutes)
-          val initialDelayMs = 20 * 60 * 1000L // 20 minutes
-          val currentFirstOpen = if (firstOpenTimestamp == 0L) System.currentTimeMillis() else firstOpenTimestamp
-          val elapsed = System.currentTimeMillis() - currentFirstOpen
-          val remaining = (initialDelayMs - elapsed).coerceAtLeast(0L)
-          remaining to false
-        }
-
-        if (remainingDelay > 0L) {
-          kotlinx.coroutines.delay(remainingDelay)
-        }
-
-        if (isHomeTabActive && !isCommunityPromptPermanentlyDismissed && !hasDismissedThisSession) {
-          isFollowupPrompt = isFollowup
-          showCommunityAutoPopup = true
-        }
       }
     }
 
@@ -522,15 +478,6 @@ object MainScreen : Screen {
       }
     }
 
-    if (showCommunityAutoPopup && !isCommunityPromptPermanentlyDismissed) {
-      CommunityLinksDialog(
-        isFollowupPrompt = isFollowupPrompt,
-        onDismissRequest = {
-          hasDismissedThisSession = true
-          showCommunityAutoPopup = false
-        }
-      )
-    }
   }
 }
 
