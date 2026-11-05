@@ -39,3 +39,4 @@ signing.properties
 
 # Local agent state
 .agentbridge/conversation.db
+.agentbridge/
