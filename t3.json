@@ -1,0 +1,25 @@
+{
+  "$schema": "https://t3.codes/schema/t3.json",
+  "scripts": [
+    {
+      "name": "Build and Install Debug",
+      "command": "./gradlew :app:installDebug",
+      "icon": "debug"
+    },
+    {
+      "name": "Build and Install Release",
+      "command": "./gradlew :app:installRelease",
+      "icon": "build"
+    },
+    {
+      "name": "Format",
+      "command": "./gradlew spotlessApply",
+      "icon": "configure"
+    },
+    {
+      "name": "Lint",
+      "command": "./gradlew :app:lintDebug",
+      "icon": "lint"
+    }
+  ]
+}
