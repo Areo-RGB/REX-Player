@@ -16,3 +16,26 @@ compile_release.sh
 remote.log
 mpvRex-libmpv/
 REX-Ytdlp/
+
+# Build output and generated files
+build/
+.gradle/
+.kotlin/
+.cxx/
+.externalNativeBuild/
+captures/
+*.hprof
+*.class
+*.dex
+*.so
+
+# Binaries and signing material
+*.apk
+*.aab
+*.keystore
+*.jks
+keystore.properties
+signing.properties
+
+# Local agent state
+.agentbridge/conversation.db
